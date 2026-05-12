@@ -4,549 +4,120 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>APICat — URL Intelligence Engine</title>
-
-<!-- Firebase -->
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
-  import { getFirestore, collection, addDoc, getDocs, orderBy, query, limit }
-    from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
-
-  const firebaseConfig = {
-    apiKey: "AIzaSyCB71bM-oVA-kxi9miO55pmpU2-N3pbCUo",
-    authDomain: "apicat-cf3ed.firebaseapp.com",
-    projectId: "apicat-cf3ed",
-    storageBucket: "apicat-cf3ed.firebasestorage.app",
-    messagingSenderId: "230026386638",
-    appId: "1:230026386638:web:c49cbb01d012daba44c49f",
-    measurementId: "G-4VET09Q391"
-  };
-
-  const app = initializeApp(firebaseConfig);
-  const db = getFirestore(app);
-
-  window._db = db;
-  window._addDoc = addDoc;
-  window._collection = collection;
-  window._getDocs = getDocs;
-  window._query = query;
-  window._orderBy = orderBy;
-  window._limit = limit;
-
-  window.dispatchEvent(new Event("firebase-ready"));
-</script>
-
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet" />
-
 <style>
-  :root {
-    --bg: #080c10;
-    --bg2: #0d1117;
-    --bg3: #141b24;
-    --border: #1e2d3d;
-    --accent: #00e5ff;
-    --accent2: #7df3a0;
-    --warn: #ffb74d;
-    --danger: #ff5252;
-    --muted: #4a6070;
-    --text: #c9d8e8;
-    --text-dim: #566e84;
-    --mono: 'Space Mono', monospace;
-    --sans: 'Syne', sans-serif;
-  }
-
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: var(--sans);
-    min-height: 100vh;
-    overflow-x: hidden;
-  }
-
-  /* GRID BACKGROUND */
-  body::before {
-    content: '';
-    position: fixed; inset: 0;
-    background-image:
-      linear-gradient(rgba(0,229,255,.03) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(0,229,255,.03) 1px, transparent 1px);
-    background-size: 40px 40px;
-    pointer-events: none;
-    z-index: 0;
-  }
-
-  /* SCANLINE */
-  body::after {
-    content: '';
-    position: fixed; inset: 0;
-    background: repeating-linear-gradient(
-      0deg, transparent, transparent 2px,
-      rgba(0,0,0,.15) 2px, rgba(0,0,0,.15) 4px
-    );
-    pointer-events: none;
-    z-index: 0;
-    opacity: .4;
-  }
-
-  .wrap {
-    position: relative; z-index: 1;
-    max-width: 1100px;
-    margin: 0 auto;
-    padding: 32px 20px 80px;
-  }
-
-  /* HEADER */
-  header {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    margin-bottom: 48px;
-    border-bottom: 1px solid var(--border);
-    padding-bottom: 24px;
-  }
-
-  .logo-icon {
-    width: 44px; height: 44px;
-    background: linear-gradient(135deg, var(--accent), #0057a8);
-    border-radius: 10px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 20px;
-    box-shadow: 0 0 20px rgba(0,229,255,.3);
-    flex-shrink: 0;
-  }
-
-  .logo-text { flex: 1; }
-  .logo-text h1 {
-    font-size: 22px;
-    font-weight: 800;
-    letter-spacing: 1px;
-    color: #fff;
-  }
-  .logo-text h1 span { color: var(--accent); }
-  .logo-text p {
-    font-family: var(--mono);
-    font-size: 11px;
-    color: var(--text-dim);
-    margin-top: 2px;
-    text-transform: uppercase;
-    letter-spacing: 2px;
-  }
-
-  .status-dot {
-    display: flex; align-items: center; gap: 8px;
-    font-family: var(--mono); font-size: 11px;
-    color: var(--text-dim);
-  }
-  .status-dot::before {
-    content: '';
-    width: 8px; height: 8px;
-    border-radius: 50%;
-    background: var(--accent2);
-    box-shadow: 0 0 8px var(--accent2);
-    animation: pulse 2s infinite;
-  }
-  @keyframes pulse {
-    0%,100% { opacity: 1; }
-    50% { opacity: .4; }
-  }
-
-  /* INPUT PANEL */
-  .input-panel {
-    background: var(--bg2);
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    padding: 28px;
-    margin-bottom: 32px;
-    position: relative;
-    overflow: hidden;
-  }
-  .input-panel::before {
-    content: '';
-    position: absolute; top: 0; left: 0; right: 0; height: 2px;
-    background: linear-gradient(90deg, transparent, var(--accent), transparent);
-  }
-
-  .input-label {
-    font-family: var(--mono);
-    font-size: 11px;
-    color: var(--accent);
-    text-transform: uppercase;
-    letter-spacing: 3px;
-    margin-bottom: 14px;
-    display: block;
-  }
-
-  .input-row {
-    display: flex; gap: 12px; align-items: stretch;
-  }
-
-  .url-input {
-    flex: 1;
-    background: var(--bg3);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 14px 18px;
-    font-family: var(--mono);
-    font-size: 14px;
-    color: var(--text);
-    outline: none;
-    transition: border-color .2s, box-shadow .2s;
-  }
-  .url-input:focus {
-    border-color: var(--accent);
-    box-shadow: 0 0 0 3px rgba(0,229,255,.1);
-  }
-  .url-input::placeholder { color: var(--text-dim); }
-
-  .scan-btn {
-    background: linear-gradient(135deg, var(--accent), #0088cc);
-    border: none;
-    border-radius: 8px;
-    padding: 14px 28px;
-    font-family: var(--sans);
-    font-size: 14px;
-    font-weight: 600;
-    color: #000;
-    cursor: pointer;
-    transition: opacity .2s, transform .1s, box-shadow .2s;
-    white-space: nowrap;
-    letter-spacing: .5px;
-  }
-  .scan-btn:hover { opacity: .9; box-shadow: 0 0 20px rgba(0,229,255,.4); }
-  .scan-btn:active { transform: scale(.98); }
-  .scan-btn:disabled { opacity: .4; cursor: not-allowed; transform: none; }
-
-  /* LOADING */
-  .loading-bar {
-    display: none;
-    margin-top: 20px;
-    background: var(--bg3);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    overflow: hidden;
-    height: 4px;
-  }
-  .loading-bar.active { display: block; }
-  .loading-bar-inner {
-    height: 100%;
-    background: linear-gradient(90deg, var(--accent), var(--accent2));
-    animation: sweep 1.4s ease-in-out infinite;
-  }
-  @keyframes sweep {
-    0% { width: 0; margin-left: 0; }
-    50% { width: 60%; margin-left: 20%; }
-    100% { width: 0; margin-left: 100%; }
-  }
-
-  .loading-msg {
-    display: none;
-    margin-top: 12px;
-    font-family: var(--mono);
-    font-size: 12px;
-    color: var(--accent);
-  }
-  .loading-msg.active { display: flex; align-items: center; gap: 10px; }
-  .loading-msg::before {
-    content: '▸';
-    animation: blink .8s step-end infinite;
-  }
-  @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0; } }
-
-  /* RESULT */
-  .result-panel {
-    display: none;
-    background: var(--bg2);
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    overflow: hidden;
-    margin-bottom: 32px;
-    animation: slideUp .4s ease;
-  }
-  @keyframes slideUp {
-    from { opacity: 0; transform: translateY(16px); }
-    to   { opacity: 1; transform: translateY(0); }
-  }
-  .result-panel.show { display: block; }
-
-  .result-header {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 20px 28px;
-    border-bottom: 1px solid var(--border);
-    background: var(--bg3);
-  }
-
-  .result-url {
-    font-family: var(--mono);
-    font-size: 13px;
-    color: var(--accent);
-    word-break: break-all;
-  }
-
-  .risk-badge {
-    padding: 4px 14px;
-    border-radius: 20px;
-    font-family: var(--mono);
-    font-size: 11px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    flex-shrink: 0;
-    margin-left: 16px;
-  }
-  .risk-low    { background: rgba(125,243,160,.15); color: var(--accent2); border: 1px solid rgba(125,243,160,.3); }
-  .risk-medium { background: rgba(255,183,77,.15);  color: var(--warn);    border: 1px solid rgba(255,183,77,.3); }
-  .risk-high   { background: rgba(255,82,82,.15);   color: var(--danger);  border: 1px solid rgba(255,82,82,.3); }
-
-  .result-body { padding: 28px; }
-
-  .result-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 20px;
-    margin-bottom: 24px;
-  }
-
-  .r-card {
-    background: var(--bg3);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 18px;
-  }
-  .r-card-label {
-    font-family: var(--mono);
-    font-size: 10px;
-    color: var(--text-dim);
-    text-transform: uppercase;
-    letter-spacing: 2px;
-    margin-bottom: 10px;
-  }
-  .r-card-value {
-    font-size: 16px;
-    font-weight: 600;
-    color: #fff;
-  }
-  .r-card-sub {
-    font-family: var(--mono);
-    font-size: 11px;
-    color: var(--text-dim);
-    margin-top: 4px;
-  }
-
-  /* CONFIDENCE METER */
-  .confidence-track {
-    background: var(--bg);
-    border-radius: 4px;
-    height: 6px;
-    margin-top: 10px;
-    overflow: hidden;
-  }
-  .confidence-fill {
-    height: 100%;
-    border-radius: 4px;
-    background: linear-gradient(90deg, var(--accent), var(--accent2));
-    transition: width 1s cubic-bezier(.4,0,.2,1);
-  }
-
-  .reason-box {
-    background: var(--bg3);
-    border: 1px solid var(--border);
-    border-left: 3px solid var(--accent);
-    border-radius: 0 10px 10px 0;
-    padding: 16px 20px;
-    margin-bottom: 20px;
-  }
-  .reason-box p {
-    font-size: 14px;
-    line-height: 1.7;
-    color: var(--text);
-  }
-
-  .signals-wrap {
-    margin-bottom: 20px;
-  }
-  .signals-label {
-    font-family: var(--mono);
-    font-size: 10px;
-    color: var(--text-dim);
-    text-transform: uppercase;
-    letter-spacing: 2px;
-    margin-bottom: 10px;
-  }
-  .signals-tags { display: flex; flex-wrap: wrap; gap: 8px; }
-  .signal-tag {
-    background: rgba(0,229,255,.08);
-    border: 1px solid rgba(0,229,255,.2);
-    color: var(--accent);
-    font-family: var(--mono);
-    font-size: 11px;
-    padding: 4px 12px;
-    border-radius: 4px;
-  }
-
-  .secondary-wrap { margin-bottom: 20px; }
-  .sec-tag {
-    background: rgba(100,100,120,.15);
-    border: 1px solid var(--border);
-    color: var(--text-dim);
-    font-family: var(--mono);
-    font-size: 11px;
-    padding: 4px 12px;
-    border-radius: 4px;
-    display: inline-block;
-    margin: 0 6px 6px 0;
-  }
-
-  /* JSON VIEW */
-  .json-toggle {
-    background: transparent;
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    color: var(--text-dim);
-    font-family: var(--mono);
-    font-size: 11px;
-    padding: 6px 14px;
-    cursor: pointer;
-    transition: border-color .2s, color .2s;
-  }
-  .json-toggle:hover { border-color: var(--accent); color: var(--accent); }
-
-  .json-view {
-    display: none;
-    margin-top: 16px;
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 20px;
-    overflow-x: auto;
-  }
-  .json-view.show { display: block; }
-  .json-view pre {
-    font-family: var(--mono);
-    font-size: 12px;
-    line-height: 1.8;
-    color: var(--text);
-    white-space: pre-wrap;
-    word-break: break-word;
-  }
-
-  /* HISTORY */
-  .history-section { margin-top: 40px; }
-  .section-title {
-    font-family: var(--mono);
-    font-size: 11px;
-    color: var(--text-dim);
-    text-transform: uppercase;
-    letter-spacing: 3px;
-    margin-bottom: 16px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-  }
-  .section-title::after {
-    content: '';
-    flex: 1;
-    height: 1px;
-    background: var(--border);
-  }
-
-  .history-list { display: flex; flex-direction: column; gap: 10px; }
-
-  .history-item {
-    background: var(--bg2);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 14px 20px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 16px;
-    cursor: pointer;
-    transition: border-color .15s, background .15s;
-  }
-  .history-item:hover { border-color: var(--accent); background: var(--bg3); }
-
-  .h-url {
-    font-family: var(--mono);
-    font-size: 12px;
-    color: var(--accent);
-    flex: 1;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  .h-cat {
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--text);
-    white-space: nowrap;
-  }
-  .h-time {
-    font-family: var(--mono);
-    font-size: 10px;
-    color: var(--text-dim);
-    white-space: nowrap;
-  }
-
-  /* ERROR */
-  .error-msg {
-    display: none;
-    background: rgba(255,82,82,.08);
-    border: 1px solid rgba(255,82,82,.25);
-    border-radius: 10px;
-    padding: 16px 20px;
-    font-family: var(--mono);
-    font-size: 12px;
-    color: var(--danger);
-    margin-top: 16px;
-  }
-  .error-msg.show { display: block; }
-
-  /* COLOR SYNTAX for JSON */
-  .json-key   { color: #7dd3fc; }
-  .json-str   { color: #86efac; }
-  .json-num   { color: #fbbf24; }
-  .json-bool  { color: #f472b6; }
-  .json-null  { color: var(--muted); }
-
-  @media (max-width: 640px) {
-    .result-grid { grid-template-columns: 1fr; }
-    .input-row { flex-direction: column; }
-    .scan-btn { width: 100%; }
-  }
+:root {
+  --bg:#080c10; --bg2:#0d1117; --bg3:#141b24; --border:#1e2d3d;
+  --accent:#00e5ff; --accent2:#7df3a0; --warn:#ffb74d; --danger:#ff5252;
+  --text:#c9d8e8; --text-dim:#566e84;
+  --mono:'Space Mono',monospace; --sans:'Syne',sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100vh;overflow-x:hidden;}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(0,229,255,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(0,229,255,.03) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0;}
+body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.15) 2px,rgba(0,0,0,.15) 4px);pointer-events:none;z-index:0;opacity:.4;}
+.wrap{position:relative;z-index:1;max-width:1100px;margin:0 auto;padding:32px 20px 80px;}
+header{display:flex;align-items:center;gap:16px;margin-bottom:48px;border-bottom:1px solid var(--border);padding-bottom:24px;}
+.logo-icon{width:44px;height:44px;background:linear-gradient(135deg,var(--accent),#0057a8);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;box-shadow:0 0 20px rgba(0,229,255,.3);flex-shrink:0;}
+.logo-text{flex:1;}
+.logo-text h1{font-size:22px;font-weight:800;letter-spacing:1px;color:#fff;}
+.logo-text h1 span{color:var(--accent);}
+.logo-text p{font-family:var(--mono);font-size:11px;color:var(--text-dim);margin-top:2px;text-transform:uppercase;letter-spacing:2px;}
+.engine-badge{display:flex;align-items:center;gap:8px;background:rgba(66,133,244,.1);border:1px solid rgba(66,133,244,.3);border-radius:20px;padding:6px 14px;font-family:var(--mono);font-size:11px;color:#8ab4f8;white-space:nowrap;}
+.status-dot{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:11px;color:var(--text-dim);white-space:nowrap;}
+.status-dot.online{color:var(--accent2);}
+.status-dot::before{content:'';width:8px;height:8px;border-radius:50%;background:var(--text-dim);}
+.status-dot.online::before{background:var(--accent2);box-shadow:0 0 8px var(--accent2);animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.input-panel{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:28px;margin-bottom:32px;position:relative;overflow:hidden;}
+.input-panel::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--accent),transparent);}
+.input-label{font-family:var(--mono);font-size:11px;color:var(--accent);text-transform:uppercase;letter-spacing:3px;margin-bottom:14px;display:block;}
+.input-row{display:flex;gap:12px;}
+.url-input{flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:14px 18px;font-family:var(--mono);font-size:14px;color:var(--text);outline:none;transition:border-color .2s,box-shadow .2s;}
+.url-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(0,229,255,.1);}
+.url-input::placeholder{color:var(--text-dim);}
+.scan-btn{background:linear-gradient(135deg,var(--accent),#0088cc);border:none;border-radius:8px;padding:14px 28px;font-family:var(--sans);font-size:14px;font-weight:600;color:#000;cursor:pointer;transition:opacity .2s,box-shadow .2s;white-space:nowrap;}
+.scan-btn:hover{opacity:.9;box-shadow:0 0 20px rgba(0,229,255,.4);}
+.scan-btn:active{transform:scale(.98);}
+.scan-btn:disabled{opacity:.4;cursor:not-allowed;}
+.loading-bar{display:none;margin-top:18px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;overflow:hidden;height:4px;}
+.loading-bar.active{display:block;}
+.loading-bar-inner{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));animation:sweep 1.4s ease-in-out infinite;}
+@keyframes sweep{0%{width:0;margin-left:0}50%{width:60%;margin-left:20%}100%{width:0;margin-left:100%}}
+.loading-msg{display:none;margin-top:12px;font-family:var(--mono);font-size:12px;color:var(--accent);}
+.loading-msg.active{display:flex;align-items:center;gap:8px;}
+.loading-msg::before{content:'▸';animation:blink .8s step-end infinite;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+.error-msg{display:none;background:rgba(255,82,82,.08);border:1px solid rgba(255,82,82,.25);border-radius:10px;padding:14px 18px;font-family:var(--mono);font-size:12px;color:var(--danger);margin-top:16px;}
+.error-msg.show{display:block;}
+.result-panel{display:none;background:var(--bg2);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:32px;animation:slideUp .4s ease;}
+@keyframes slideUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+.result-panel.show{display:block;}
+.result-header{display:flex;align-items:center;justify-content:space-between;padding:18px 28px;border-bottom:1px solid var(--border);background:var(--bg3);gap:16px;}
+.result-url{font-family:var(--mono);font-size:12px;color:var(--accent);word-break:break-all;}
+.risk-badge{padding:4px 14px;border-radius:20px;font-family:var(--mono);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;flex-shrink:0;}
+.risk-low{background:rgba(125,243,160,.15);color:var(--accent2);border:1px solid rgba(125,243,160,.3);}
+.risk-medium{background:rgba(255,183,77,.15);color:var(--warn);border:1px solid rgba(255,183,77,.3);}
+.risk-high{background:rgba(255,82,82,.15);color:var(--danger);border:1px solid rgba(255,82,82,.3);}
+.result-body{padding:28px;}
+.result-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:24px;}
+.r-card{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:18px;}
+.r-label{font-family:var(--mono);font-size:10px;color:var(--text-dim);text-transform:uppercase;letter-spacing:2px;margin-bottom:8px;}
+.r-value{font-size:16px;font-weight:600;color:#fff;}
+.r-sub{font-family:var(--mono);font-size:11px;color:var(--text-dim);margin-top:4px;}
+.conf-track{background:var(--bg);border-radius:4px;height:6px;margin-top:10px;overflow:hidden;}
+.conf-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,var(--accent),var(--accent2));width:0%;transition:width 1s cubic-bezier(.4,0,.2,1);}
+.reason-box{background:var(--bg3);border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:0 10px 10px 0;padding:16px 20px;margin-bottom:20px;}
+.reason-box p{font-size:14px;line-height:1.7;color:var(--text);}
+.signals-wrap,.secondary-wrap{margin-bottom:20px;}
+.sig-label{font-family:var(--mono);font-size:10px;color:var(--text-dim);text-transform:uppercase;letter-spacing:2px;margin-bottom:10px;}
+.tags{display:flex;flex-wrap:wrap;gap:8px;}
+.sig-tag{background:rgba(0,229,255,.08);border:1px solid rgba(0,229,255,.2);color:var(--accent);font-family:var(--mono);font-size:11px;padding:4px 12px;border-radius:4px;}
+.sec-tag{background:rgba(100,100,120,.15);border:1px solid var(--border);color:var(--text-dim);font-family:var(--mono);font-size:11px;padding:4px 12px;border-radius:4px;}
+.json-toggle{background:transparent;border:1px solid var(--border);border-radius:6px;color:var(--text-dim);font-family:var(--mono);font-size:11px;padding:6px 14px;cursor:pointer;transition:border-color .2s,color .2s;}
+.json-toggle:hover{border-color:var(--accent);color:var(--accent);}
+.json-view{display:none;margin-top:16px;background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:20px;overflow-x:auto;}
+.json-view.show{display:block;}
+.json-view pre{font-family:var(--mono);font-size:12px;line-height:1.8;color:var(--text);white-space:pre-wrap;word-break:break-word;}
+.json-key{color:#7dd3fc;}.json-str{color:#86efac;}.json-num{color:#fbbf24;}.json-bool{color:#f472b6;}.json-null{color:var(--text-dim);}
+.history-section{margin-top:40px;}
+.sec-title{font-family:var(--mono);font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:3px;margin-bottom:16px;display:flex;align-items:center;gap:12px;}
+.sec-title::after{content:'';flex:1;height:1px;background:var(--border);}
+.history-list{display:flex;flex-direction:column;gap:10px;}
+.h-item{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:14px 20px;display:flex;align-items:center;gap:16px;cursor:pointer;transition:border-color .15s,background .15s;}
+.h-item:hover{border-color:var(--accent);background:var(--bg3);}
+.h-url{font-family:var(--mono);font-size:12px;color:var(--accent);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.h-cat{font-size:12px;font-weight:600;color:var(--text);white-space:nowrap;}
+.h-time{font-family:var(--mono);font-size:10px;color:var(--text-dim);white-space:nowrap;}
+@media(max-width:640px){.result-grid{grid-template-columns:1fr;}.input-row{flex-direction:column;}}
 </style>
 </head>
 <body>
 <div class="wrap">
 
-  <!-- HEADER -->
   <header>
     <div class="logo-icon">🔍</div>
     <div class="logo-text">
       <h1>API<span>Cat</span></h1>
       <p>URL Intelligence Engine · v2.0</p>
     </div>
-    <div class="status-dot" id="statusDot">OFFLINE</div>
+    <div class="engine-badge">✦ Gemini · Firebase AI</div>
+    <div class="status-dot" id="statusDot">LOADING</div>
   </header>
 
-  <!-- INPUT -->
   <div class="input-panel">
     <span class="input-label">// Target URL</span>
     <div class="input-row">
-      <input class="url-input" id="urlInput"
-        type="text"
-        placeholder="https://example.com"
-        autocomplete="off"
-        spellcheck="false" />
+      <input class="url-input" id="urlInput" type="text"
+        placeholder="https://example.com" autocomplete="off" spellcheck="false" />
       <button class="scan-btn" id="scanBtn" onclick="classify()">⚡ Analyze</button>
     </div>
     <div class="loading-bar" id="loadingBar"><div class="loading-bar-inner"></div></div>
-    <div class="loading-msg" id="loadingMsg">Deep semantic analysis in progress…</div>
+    <div class="loading-msg" id="loadingMsg">Gemini is analyzing the website…</div>
     <div class="error-msg" id="errorMsg"></div>
   </div>
 
-  <!-- RESULT -->
   <div class="result-panel" id="resultPanel">
     <div class="result-header">
       <span class="result-url" id="resUrl"></span>
@@ -555,362 +126,219 @@
     <div class="result-body">
       <div class="result-grid">
         <div class="r-card">
-          <div class="r-card-label">Primary Category</div>
-          <div class="r-card-value" id="catName">—</div>
-          <div class="r-card-sub" id="catId">—</div>
+          <div class="r-label">Primary Category</div>
+          <div class="r-value" id="catName">—</div>
+          <div class="r-sub" id="catId">—</div>
         </div>
         <div class="r-card">
-          <div class="r-card-label">AI Summary</div>
-          <div class="r-card-value" id="aiSummary" style="font-size:14px;">—</div>
-          <div class="r-card-label" style="margin-top:12px;margin-bottom:4px;">Confidence</div>
-          <div class="r-card-sub" id="confValue">—</div>
-          <div class="confidence-track">
-            <div class="confidence-fill" id="confFill" style="width:0%"></div>
-          </div>
+          <div class="r-label">AI Summary</div>
+          <div class="r-value" id="aiSummary" style="font-size:14px">—</div>
+          <div class="r-label" style="margin-top:12px;margin-bottom:4px">Confidence</div>
+          <div class="r-sub" id="confValue">—</div>
+          <div class="conf-track"><div class="conf-fill" id="confFill"></div></div>
         </div>
       </div>
-
       <div class="reason-box">
-        <div class="r-card-label" style="margin-bottom:8px;">Classification Reason</div>
+        <div class="r-label" style="margin-bottom:8px">Classification Reason</div>
         <p id="reason">—</p>
       </div>
-
       <div class="signals-wrap" id="signalsWrap"></div>
       <div class="secondary-wrap" id="secondaryWrap"></div>
-
-      <button class="json-toggle" onclick="toggleJSON()">{ } View Raw JSON</button>
+      <button class="json-toggle" onclick="toggleJSON()">{ } Raw JSON</button>
       <div class="json-view" id="jsonView"><pre id="jsonPre"></pre></div>
     </div>
   </div>
 
-  <!-- HISTORY -->
   <div class="history-section" id="historySection" style="display:none">
-    <div class="section-title">Recent Scans</div>
+    <div class="sec-title">Recent Scans</div>
     <div class="history-list" id="historyList"></div>
   </div>
 
 </div>
 
-<script>
-// ──────────────────────────────────────────────
-// CONFIG
-// ──────────────────────────────────────────────
-const ANTHROPIC_API = "https://api.anthropic.com/v1/messages";
-const MODEL = "claude-sonnet-4-20250514";
+<script type="module">
+import { initializeApp }
+  from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
+import { initializeAppCheck, ReCaptchaV3Provider }
+  from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app-check.js";
+import { getFirestore, collection, addDoc, getDocs, orderBy, query, limit }
+  from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
+import { getAI, getGenerativeModel, GoogleAIBackend }
+  from "https://www.gstatic.com/firebasejs/11.0.0/firebase-ai.js";
 
-const SYSTEM_PROMPT = `You are an enterprise-grade URL classification engine.
+const firebaseConfig = {
+  apiKey:            "AIzaSyCB71bM-oVA-kxi9miO55pmpU2-N3pbCUo",
+  authDomain:        "apicat-cf3ed.firebaseapp.com",
+  projectId:         "apicat-cf3ed",
+  storageBucket:     "apicat-cf3ed.firebasestorage.app",
+  messagingSenderId: "230026386638",
+  appId:             "1:230026386638:web:c49cbb01d012daba44c49f",
+  measurementId:     "G-4VET09Q391"
+};
 
-When given a URL, you MUST:
-1. Use web_search to look up the website and understand its content
-2. Perform deep semantic analysis of the website's purpose, business model, and audience
-3. Return ONLY a strict JSON object — no markdown, no preamble, no explanation outside JSON
+const app = initializeApp(firebaseConfig);
 
-CLASSIFICATION TAXONOMY (use these IDs):
-- Business & Commercial: 20005
-- Education: 20008
-- Health: 20016
-- Gambling: 701
-- Adult/Porn: 301
-- Shopping/Retail: 902
-- Generative AI: 20107
-- Social Networks: 20091
-- Malware: 402
-- Scams: 20108
-- News & Media: 20001
-- Finance & Banking: 20006
-- Government: 20012
-- Sports: 20003
-- Entertainment: 20002
-- Travel: 20014
-- Technology: 20010
-- Gaming: 20004
-- Forums & Communities: 20093
-- Search Engines: 501
-- Email Services: 502
-- Cloud Services: 20109
-- Cybersecurity: 20110
-- Job Boards: 20015
-- Real Estate: 20007
-- Food & Dining: 20017
-- Automotive: 20009
-- Legal: 20013
-- Religion & Spirituality: 20011
-- Arts & Culture: 20018
-- Science & Research: 20019
-- Politics: 20020
-- Other: 99999
+initializeAppCheck(app, {
+  provider: new ReCaptchaV3Provider("123456"),
+  isTokenAutoRefreshEnabled: true
+});
 
-OUTPUT FORMAT — respond with ONLY this JSON and nothing else:
+const db    = getFirestore(app);
+const ai    = getAI(app, { backend: new GoogleAIBackend() });
+const model = getGenerativeModel(ai, {
+  model: "gemini-2.0-flash",
+  tools: [{ googleSearch: {} }]
+});
+
+const SYSTEM = `You are an enterprise URL classification engine (NetSTAR-style).
+
+Given a URL, use Google Search to look up and understand the website's content, purpose, audience, and business model. Perform deep semantic analysis — not keyword matching.
+
+TAXONOMY (use these IDs):
+20005=Business & Commercial, 20008=Education, 20016=Health, 701=Gambling,
+301=Adult/Porn, 902=Shopping/Retail, 20107=Generative AI, 20091=Social Networks,
+402=Malware, 20108=Scams, 20001=News & Media, 20006=Finance & Banking,
+20012=Government, 20003=Sports, 20002=Entertainment, 20014=Travel,
+20010=Technology, 20004=Gaming, 20093=Forums & Communities, 501=Search Engines,
+502=Email Services, 20109=Cloud Services, 20110=Cybersecurity, 20015=Job Boards,
+20007=Real Estate, 20017=Food & Dining, 20009=Automotive, 20013=Legal,
+20011=Religion & Spirituality, 20018=Arts & Culture, 20019=Science & Research,
+20020=Politics, 99999=Other
+
+RULES:
+- Choose ONE primary category (most dominant intent)
+- Ignore ads, nav menus, cookie banners
+- Never return null or empty
+- risk_level must be: low | medium | high
+  - high  = malware, scams, adult, illegal content
+  - medium = gambling, controversial, unverified
+  - low   = everything else
+
+RESPOND WITH ONLY THIS JSON — no markdown, no backticks, no extra text:
 {
-  "url": "<the input url>",
-  "category": {
-    "id": "<taxonomy id>",
-    "name": "<category name>"
-  },
-  "confidence": <0.0 to 1.0>,
-  "reason": "<1-2 sentence explanation>",
-  "key_signals": ["signal1", "signal2", "signal3"],
-  "secondary_categories": ["id name", "id name"],
+  "url": "<input url>",
+  "category": { "id": "<id>", "name": "<name>" },
+  "confidence": <0.00-1.00>,
+  "reason": "<1-2 sentences>",
+  "key_signals": ["signal1","signal2","signal3","signal4"],
+  "secondary_categories": ["id name","id name"],
   "risk_level": "low|medium|high",
   "ai_summary": "<5-8 word label>"
 }`;
 
-// ──────────────────────────────────────────────
-// STATE
-// ──────────────────────────────────────────────
-let currentResult = null;
-let firebaseReady = false;
+const statusDot = document.getElementById("statusDot");
+statusDot.textContent = "ONLINE";
+statusDot.classList.add("online");
 
-window.addEventListener("firebase-ready", () => {
-  firebaseReady = true;
-  document.getElementById("statusDot").textContent = "ONLINE";
-  loadHistory();
-});
-
-// ──────────────────────────────────────────────
-// CLASSIFY
-// ──────────────────────────────────────────────
-async function classify() {
+window.classify = async function () {
   const url = document.getElementById("urlInput").value.trim();
   if (!url) return;
-
   setLoading(true);
   hideError();
   hideResult();
-
   try {
-    const raw = await callClaude(url);
-    const parsed = parseJSON(raw);
-    currentResult = parsed;
-    renderResult(parsed);
-    saveToFirebase(parsed);
+    const result = await model.generateContent(`${SYSTEM}\n\nClassify this URL: ${url}`);
+    const raw    = result.response.text();
+    const data   = parseJSON(raw);
+    renderResult(data);
+    saveHistory(data);
   } catch (e) {
-    showError(e.message || "Classification failed. Please try again.");
+    showError(e.message || "Classification failed. Check console for details.");
+    console.error(e);
   } finally {
     setLoading(false);
   }
-}
+};
 
-// ──────────────────────────────────────────────
-// CLAUDE API
-// ──────────────────────────────────────────────
-async function callClaude(url) {
-  const res = await fetch(ANTHROPIC_API, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model: MODEL,
-      max_tokens: 1000,
-      system: SYSTEM_PROMPT,
-      tools: [{
-        type: "web_search_20250305",
-        name: "web_search"
-      }],
-      messages: [{
-        role: "user",
-        content: `Classify this URL: ${url}\n\nSearch for it first to understand the website, then return ONLY the JSON classification object.`
-      }]
-    })
-  });
-
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err?.error?.message || `API error ${res.status}`);
-  }
-
-  const data = await res.json();
-
-  // Extract the text block(s)
-  const textBlocks = (data.content || [])
-    .filter(b => b.type === "text")
-    .map(b => b.text)
-    .join("");
-
-  if (!textBlocks) throw new Error("No text response from model.");
-  return textBlocks;
-}
-
-// ──────────────────────────────────────────────
-// PARSE JSON
-// ──────────────────────────────────────────────
 function parseJSON(raw) {
-  const cleaned = raw
-    .replace(/```json\s*/gi, "")
-    .replace(/```\s*/g, "")
-    .trim();
-
-  // Try direct parse
-  try { return JSON.parse(cleaned); } catch(_) {}
-
-  // Find JSON object in text
-  const match = cleaned.match(/\{[\s\S]+\}/);
-  if (match) {
-    try { return JSON.parse(match[0]); } catch(_) {}
-  }
-
-  throw new Error("Could not parse classification response as JSON.");
+  const c = raw.replace(/```json\s*/gi,"").replace(/```/g,"").trim();
+  try { return JSON.parse(c); } catch(_) {}
+  const m = c.match(/\{[\s\S]+\}/);
+  if (m) { try { return JSON.parse(m[0]); } catch(_) {} }
+  throw new Error("Could not parse response as JSON. Got: " + raw.slice(0,200));
 }
 
-// ──────────────────────────────────────────────
-// RENDER
-// ──────────────────────────────────────────────
 function renderResult(d) {
-  document.getElementById("resUrl").textContent = d.url || "—";
-  document.getElementById("catName").textContent = d.category?.name || "Unknown";
-  document.getElementById("catId").textContent = "ID: " + (d.category?.id || "—");
+  document.getElementById("resUrl").textContent    = d.url || "—";
+  document.getElementById("catName").textContent   = d.category?.name || "Unknown";
+  document.getElementById("catId").textContent     = "ID: " + (d.category?.id || "—");
   document.getElementById("aiSummary").textContent = d.ai_summary || "—";
-  document.getElementById("reason").textContent = d.reason || "—";
+  document.getElementById("reason").textContent    = d.reason || "—";
 
-  // Confidence
-  const conf = parseFloat(d.confidence) || 0;
-  const pct = Math.round(conf * 100);
+  const pct = Math.round((parseFloat(d.confidence)||0)*100);
   document.getElementById("confValue").textContent = pct + "%";
-  setTimeout(() => {
-    document.getElementById("confFill").style.width = pct + "%";
-  }, 100);
+  setTimeout(() => { document.getElementById("confFill").style.width = pct + "%"; }, 100);
 
-  // Risk badge
+  const risk = (d.risk_level||"low").toLowerCase();
   const rb = document.getElementById("riskBadge");
-  const risk = (d.risk_level || "low").toLowerCase();
   rb.textContent = risk.toUpperCase();
-  rb.className = "risk-badge risk-" + risk;
+  rb.className   = "risk-badge risk-" + risk;
 
-  // Key signals
-  const sw = document.getElementById("signalsWrap");
-  if (d.key_signals?.length) {
-    sw.innerHTML = `<div class="signals-label">Key Signals</div>
-      <div class="signals-tags">${d.key_signals.map(s =>
-        `<span class="signal-tag">${s}</span>`).join("")}</div>`;
-  } else { sw.innerHTML = ""; }
+  document.getElementById("signalsWrap").innerHTML = d.key_signals?.length
+    ? `<div class="sig-label">Key Signals</div><div class="tags">${d.key_signals.map(s=>`<span class="sig-tag">${esc(s)}</span>`).join("")}</div>`
+    : "";
 
-  // Secondary categories
-  const secW = document.getElementById("secondaryWrap");
-  if (d.secondary_categories?.length) {
-    secW.innerHTML = `<div class="signals-label" style="margin-bottom:8px;">Secondary Categories</div>
-      ${d.secondary_categories.map(s =>
-        `<span class="sec-tag">${s}</span>`).join("")}`;
-  } else { secW.innerHTML = ""; }
+  document.getElementById("secondaryWrap").innerHTML = d.secondary_categories?.length
+    ? `<div class="sig-label" style="margin-bottom:8px">Secondary Categories</div><div class="tags">${d.secondary_categories.map(s=>`<span class="sec-tag">${esc(s)}</span>`).join("")}</div>`
+    : "";
 
-  // JSON view
-  document.getElementById("jsonPre").innerHTML = syntaxHighlight(JSON.stringify(d, null, 2));
+  document.getElementById("jsonPre").innerHTML = syntaxHL(JSON.stringify(d,null,2));
   document.getElementById("jsonView").classList.remove("show");
-
   document.getElementById("resultPanel").classList.add("show");
 }
 
-// ──────────────────────────────────────────────
-// JSON SYNTAX HIGHLIGHT
-// ──────────────────────────────────────────────
-function syntaxHighlight(json) {
-  return json
-    .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
-    .replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, m => {
-      if (/^"/.test(m)) {
-        if (/:$/.test(m)) return `<span class="json-key">${m}</span>`;
-        return `<span class="json-str">${m}</span>`;
-      }
-      if (/true|false/.test(m)) return `<span class="json-bool">${m}</span>`;
-      if (/null/.test(m)) return `<span class="json-null">${m}</span>`;
-      return `<span class="json-num">${m}</span>`;
-    });
-}
-
-// ──────────────────────────────────────────────
-// FIREBASE HISTORY
-// ──────────────────────────────────────────────
-async function saveToFirebase(data) {
-  if (!firebaseReady) return;
+async function saveHistory(data) {
   try {
-    await window._addDoc(window._collection(window._db, "scans"), {
-      ...data,
-      timestamp: Date.now()
-    });
+    await addDoc(collection(db,"scans"), { ...data, timestamp: Date.now() });
     loadHistory();
-  } catch (e) {
-    console.warn("Firebase save failed:", e);
-  }
+  } catch(e) { console.warn("Firestore save:", e); }
 }
 
 async function loadHistory() {
-  if (!firebaseReady) return;
   try {
-    const q = window._query(
-      window._collection(window._db, "scans"),
-      window._orderBy("timestamp", "desc"),
-      window._limit(10)
-    );
-    const snap = await window._getDocs(q);
+    const q    = query(collection(db,"scans"), orderBy("timestamp","desc"), limit(10));
+    const snap = await getDocs(q);
     const items = [];
     snap.forEach(doc => items.push(doc.data()));
-    renderHistory(items);
-  } catch (e) {
-    console.warn("Firebase load failed:", e);
-  }
+    if (!items.length) return;
+    document.getElementById("historySection").style.display = "block";
+    document.getElementById("historyList").innerHTML = items.map(item => {
+      const risk = (item.risk_level||"low").toLowerCase();
+      const time = item.timestamp ? new Date(item.timestamp).toLocaleString() : "";
+      return `<div class="h-item" onclick="document.getElementById('urlInput').value='${item.url.replace(/'/g,"\\'")}';window.scrollTo({top:0,behavior:'smooth'})">
+        <span class="h-url">${esc(item.url)}</span>
+        <span class="h-cat">${esc(item.category?.name||"—")}</span>
+        <span class="risk-badge risk-${risk}" style="font-size:10px;padding:2px 10px">${risk.toUpperCase()}</span>
+        <span class="h-time">${time}</span>
+      </div>`;
+    }).join("");
+  } catch(e) { console.warn("Firestore load:", e); }
 }
 
-function renderHistory(items) {
-  if (!items.length) return;
-  document.getElementById("historySection").style.display = "block";
-  const list = document.getElementById("historyList");
-  list.innerHTML = items.map(item => {
-    const time = item.timestamp
-      ? new Date(item.timestamp).toLocaleString()
-      : "";
-    const risk = (item.risk_level || "low").toLowerCase();
-    return `<div class="history-item" onclick="fillUrl('${escapeAttr(item.url)}')">
-      <span class="h-url">${escapeHTML(item.url)}</span>
-      <span class="h-cat">${escapeHTML(item.category?.name || "—")}</span>
-      <span class="risk-badge risk-${risk}" style="font-size:10px;padding:2px 10px">${risk.toUpperCase()}</span>
-      <span class="h-time">${time}</span>
-    </div>`;
-  }).join("");
-}
+loadHistory();
 
-function fillUrl(url) {
-  document.getElementById("urlInput").value = url;
-  window.scrollTo({ top: 0, behavior: "smooth" });
-}
-
-// ──────────────────────────────────────────────
-// UI HELPERS
-// ──────────────────────────────────────────────
 function setLoading(on) {
   document.getElementById("loadingBar").classList.toggle("active", on);
   document.getElementById("loadingMsg").classList.toggle("active", on);
-  document.getElementById("scanBtn").disabled = on;
-  document.getElementById("scanBtn").textContent = on ? "Scanning…" : "⚡ Analyze";
+  const btn = document.getElementById("scanBtn");
+  btn.disabled    = on;
+  btn.textContent = on ? "Scanning…" : "⚡ Analyze";
+}
+function hideResult()   { document.getElementById("resultPanel").classList.remove("show"); document.getElementById("confFill").style.width="0%"; }
+function showError(msg) { const e=document.getElementById("errorMsg"); e.textContent="⚠ "+msg; e.classList.add("show"); }
+function hideError()    { document.getElementById("errorMsg").classList.remove("show"); }
+window.toggleJSON = () => document.getElementById("jsonView").classList.toggle("show");
+function esc(s) { return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+function syntaxHL(json) {
+  return esc(json).replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, m => {
+    if(/^"/.test(m)) return /:$/.test(m)?`<span class="json-key">${m}</span>`:`<span class="json-str">${m}</span>`;
+    if(/true|false/.test(m)) return `<span class="json-bool">${m}</span>`;
+    if(/null/.test(m))       return `<span class="json-null">${m}</span>`;
+    return `<span class="json-num">${m}</span>`;
+  });
 }
 
-function hideResult() {
-  document.getElementById("resultPanel").classList.remove("show");
-  document.getElementById("confFill").style.width = "0%";
-}
-
-function showError(msg) {
-  const el = document.getElementById("errorMsg");
-  el.textContent = "⚠ " + msg;
-  el.classList.add("show");
-}
-
-function hideError() {
-  document.getElementById("errorMsg").classList.remove("show");
-}
-
-function toggleJSON() {
-  document.getElementById("jsonView").classList.toggle("show");
-}
-
-function escapeHTML(s) {
-  return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
-}
-function escapeAttr(s) {
-  return String(s).replace(/'/g,"\\'");
-}
-
-// Enter key support
-document.getElementById("urlInput").addEventListener("keydown", e => {
-  if (e.key === "Enter") classify();
-});
+document.getElementById("urlInput").addEventListener("keydown", e => { if(e.key==="Enter") window.classify(); });
 </script>
 </body>
 </html>
